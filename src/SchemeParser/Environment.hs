@@ -11,8 +11,6 @@ import SchemeParser.Types
 import SchemeParser.Error
 import SchemeParser.Printer
 
-type Env = IORef (M.Map String (IORef LispVal))
-
 type IOThrowsError = ExceptT LispError IO
 
 nullEnv :: IO Env
