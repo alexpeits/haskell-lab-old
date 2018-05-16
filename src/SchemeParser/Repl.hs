@@ -2,6 +2,7 @@ module SchemeParser.Repl where
 
 import System.IO
 
+import SchemeParser.Types (nullEnv)
 import SchemeParser.Scheme (evalAndPrint)
 
 flushStr :: String -> IO ()
@@ -17,8 +18,11 @@ until_ pred prompt action = do
     then return ()
     else action result >> until_ pred prompt action
 
+runOne :: String -> IO ()
+runOne expr = nullEnv >>= flip evalAndPrint expr
+
 runRepl :: IO ()
-runRepl = until_ (== "quit") (readPrompt "LISP> ") evalAndPrint
+runRepl = nullEnv >>= until_ (== "quit") (readPrompt "LISP> ") . evalAndPrint
 
 main :: IO ()
 main = runRepl

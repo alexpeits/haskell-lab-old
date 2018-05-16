@@ -28,6 +28,7 @@ library
   exposed-modules:
       SchemeParser.Parser
     , SchemeParser.Types
+    , SchemeParser.Environment
     , SchemeParser.Error
     , SchemeParser.Eval
     , SchemeParser.Printer

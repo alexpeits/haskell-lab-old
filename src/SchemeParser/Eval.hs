@@ -53,7 +53,9 @@ eval (LList (LAtom "case" : key : clause : clauses)) = eval key >>= (\res -> eva
         evalCase k (LList [LList caseChoices, caseRes]) [] =
           if k `elem` caseChoices then eval caseRes else throwError (Default "Exhausted clauses in `case`")
 
-eval (LList (LAtom "get" : [LString arg])) = ReaderT $ \r -> getVar r arg
+eval (LList (LAtom "get" : [LString arg])) = getVar arg
+eval (LList (LAtom "set" : LString name : [val])) = setVar name val
+eval (LList (LAtom "define" : LString name : [val])) = defineVar name val
 
 eval (LList (LAtom func : args)) = mapM eval args >>= apply func
 

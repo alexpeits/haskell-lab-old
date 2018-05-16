@@ -3,6 +3,7 @@ module SchemeParser.Scheme where
 import Data.Map (empty)
 import System.Environment (getArgs)
 
+import Control.Monad.Reader
 import Control.Monad.Except
 
 import Text.Parsec (runParser)
@@ -18,16 +19,21 @@ readExpr' input = case runParser parseExpr empty "lisp" input of
   Left err  -> "No match: " ++ show err
   Right val -> "Found value: " ++ show val
 
-readExpr :: String -> ThrowsError LispVal
+readExpr :: String -> Scheme LispVal
 readExpr input = case runParser parseExpr empty "lisp" input of
   Left err  -> throwError $ Parser err
   Right val -> return val
 
-evalAndPrint :: String -> IO ()
-evalAndPrint = putStrLn . evalExpr
+evalAndPrint :: Env -> String -> IO ()
+evalAndPrint env s = evalExpr env s >>= putStrLn
 
-evalExpr :: String -> String
-evalExpr expr = extractValue $ fmap show $ readExpr expr >>= eval
+evalExpr :: Env -> String -> IO String
+evalExpr env expr = do
+  res <- runExceptT $ runReaderT (readExpr expr >>= eval) env
+  return $ extractValue $ trapError $ fmap show res
 
 main :: IO ()
-main = getArgs >>= evalAndPrint . head
+main = do
+  env <- testEnv
+  args <- getArgs
+  evalAndPrint env $ head args
