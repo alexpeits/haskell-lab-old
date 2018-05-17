@@ -59,7 +59,5 @@ testEnv = do
 
 type Scheme = ReaderT Env (ExceptT LispError IO)
 
-runScheme :: Scheme a -> IO (Either LispError a)
-runScheme sa = do
-  env <- nullEnv
-  runExceptT $ runReaderT sa env
+runScheme :: Scheme a -> Env -> IO (Either LispError a)
+runScheme sa env = runExceptT $ runReaderT sa env

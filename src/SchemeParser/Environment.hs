@@ -16,8 +16,8 @@ liftThrows :: ThrowsError a -> Scheme a
 liftThrows (Left err) = throwError err
 liftThrows (Right val) = return val
 
-runIOThrows :: Scheme String -> IO String
-runIOThrows action = extractValue <$> (trapError <$> runScheme action)
+-- runIOThrows :: Scheme String -> IO String
+-- runIOThrows action = extractValue <$> (trapError <$> runScheme action)
 
 isBound :: String -> Scheme Bool
 isBound var = do

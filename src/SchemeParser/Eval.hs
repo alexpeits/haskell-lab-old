@@ -182,9 +182,9 @@ eqv [LNumber arg1, LNumber arg2]           = return $ LBool $ arg1 == arg2
 eqv [LString arg1, LString arg2]           = return $ LBool $ arg1 == arg2
 eqv [LAtom arg1, LAtom arg2]               = return $ LBool $ arg1 == arg2
 eqv [LDottedList xs x, LDottedList ys y]   = eqv [LList $ xs ++ [x], LList $ ys ++ [y]]
--- eqv [LList arg1, LList arg2]               =
-  -- return $ LBool $ (length arg1 == length arg2) && all eqvPair (zip arg1 arg2)
-     -- where eqvPair (x1, x2) = case eqv [x1, x2] of Left err -> False
-                                                   -- Right (LBool val) -> val
+eqv [LList arg1, LList arg2]               = do
+  let unBool (LBool b) = b
+  e <- mapM (\(x, y) -> unBool <$> eqv [x, y]) (zip arg1 arg2)
+  return $ LBool $ (length arg1 == length arg2) && and e
 eqv [_, _]                                 = return $ LBool False
 eqv badArgList                             = throwError $ NumArgs 2 badArgList
