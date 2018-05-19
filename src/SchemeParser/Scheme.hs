@@ -6,21 +6,19 @@ import System.Environment (getArgs)
 import Control.Monad.Reader
 import Control.Monad.Except
 
-import Text.Parsec (runParser)
+import qualified Data.Map as M
+
+import qualified Text.Parsec as P
 
 import SchemeParser.Types
 import SchemeParser.Error
 import SchemeParser.Parser
 import SchemeParser.Eval
+import SchemeParser.Environment
 import SchemeParser.Printer
 
-readExpr' :: String -> String
-readExpr' input = case runParser parseExpr empty "lisp" input of
-  Left err  -> "No match: " ++ show err
-  Right val -> "Found value: " ++ show val
-
 readExpr :: String -> Scheme LispVal
-readExpr input = case runParser parseExpr empty "lisp" input of
+readExpr input = case P.parse parseExpr "lisp" input of
   Left err  -> throwError $ Parser err
   Right val -> return val
 
@@ -31,6 +29,10 @@ evalExpr :: Env -> String -> IO String
 evalExpr env expr = do
   res <- runExceptT $ runReaderT (readExpr expr >>= eval) env
   return $ extractValue $ trapError $ fmap show res
+
+envWithPrims :: IO Env
+envWithPrims = nullEnv >>= flip bindVars' (map makePrimFunc (M.toList primitives))
+  where makePrimFunc (var, func) = (var, LPrimFunc func)
 
 main :: IO ()
 main = do

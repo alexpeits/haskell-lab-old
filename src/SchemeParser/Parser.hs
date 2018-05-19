@@ -67,7 +67,7 @@ parseChar = do
     _         -> head c
 
 parseBool :: LispParser LispVal
-parseBool = 
+parseBool =
   try (string "#t" $> LBool True) <|> try (string "#f" $> LBool False)
 
 -- http://www.schemers.org/Documents/Standards/R5RS/HTML/r5rs-Z-H-9.html#%_sec_6.2.4

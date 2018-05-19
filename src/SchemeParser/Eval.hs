@@ -1,17 +1,30 @@
+{-# LANGUAGE RecordWildCards #-}
 module SchemeParser.Eval where
 
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, isNothing)
 import Data.List (find)
 
 import Control.Monad.Reader
 import Control.Monad.Except
 
 import qualified Data.Map as M
+import qualified Text.Parsec as P
 
 import SchemeParser.Types
+import SchemeParser.Parser (parseExpr)
 import SchemeParser.Error
 import SchemeParser.Printer
 import SchemeParser.Environment
+
+readExpr' :: P.Parsec String () a -> String -> Scheme a
+readExpr' parser input = case P.parse parser "lisp" input of
+  Left err  -> throwError $ Parser err
+  Right val -> return val
+
+readExprList = readExpr' (P.endBy parseExpr P.spaces)
+
+load :: String -> Scheme [LispVal]
+load filename = liftIO (readFile filename) >>= readExprList
 
 eval :: LispVal -> Scheme LispVal
 eval v@(LString _) = return v
@@ -55,15 +68,41 @@ eval (LList (LAtom "case" : key : clause : clauses)) = eval key >>= (\res -> eva
 
 eval (LList (LAtom "get" : [LString arg])) = getVar arg
 eval (LList (LAtom "set" : LString name : [val])) = setVar name val
-eval (LList (LAtom "define" : LString name : [val])) = defineVar name val
-
-eval (LList (LAtom func : args)) = mapM eval args >>= apply func
+eval (LList (LAtom "define" : LAtom name : [val])) = eval val >>= defineVar name
+eval (LList (LAtom "define" : LList (LAtom name : paramList) : bdy)) = defineVar name (LFunc (map showVal paramList) Nothing bdy)
+eval (LList (LAtom "lambda" : LList paramList : bdy)) =  return $ LFunc (map showVal paramList) Nothing bdy
+eval (LList [LAtom "printenv"]) = do env <- ask; liftIO (print env); return (LBool True)
+eval (LList [LAtom "load", LString filename]) = load filename >>= fmap last . mapM eval
+-- eval (LList (LAtom func : args)) = mapM eval args >>= applyPrim func
+eval (LList (LAtom fname : fargs)) = do
+  f <- getVar fname
+  args <- mapM eval fargs
+  applyF f args
+eval (LAtom var) = getVar var
+-- eval (LList (func : args)) = do f <- eval func
+                                -- argVals <- mapM eval args
+                                -- applyF func argVals
 
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-apply :: String -> [LispVal] -> Scheme LispVal
-apply func args = maybe notFunc ($ args) $ M.lookup func primitives
+applyPrim :: String -> [LispVal] -> Scheme LispVal
+applyPrim func args = maybe notFunc ($ args) $ M.lookup func primitives
   where notFunc = throwError $ NotFunction "Unrecognized primitive function" func
+
+applyF :: LispVal -> [LispVal] -> Scheme LispVal
+applyF (LPrimFunc func) args = func args
+applyF LFunc{..} args = do
+  let num = toInteger . length
+      remainingArgs = drop (length params) args
+      evalBody = last <$> mapM eval body
+      -- bindVarArgs arg = case arg of
+                          -- Just argName -> bindVars [(argName, LList remainingArgs)]
+                          -- Nothing      -> pure
+  if num params /= num args && isNothing vararg
+    then throwError $ NumArgs (num params) args
+    else
+    do envR <- bindVars $ zip params args
+       local (const envR) evalBody
 
 primitives :: M.Map String ([LispVal] -> Scheme LispVal)
 primitives = M.fromList
@@ -98,7 +137,11 @@ primitives = M.fromList
   , ("cons", cons)
   , ("eq?", eqv)
   , ("eqv?", eqv)
+  , ("print", lispPrint)
   ]
+
+lispPrint :: [LispVal] -> Scheme LispVal
+lispPrint [x] = liftIO (print x) >> return LNil
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> Scheme LispVal
 numericBinop _ [] = throwError $ NumArgs 2 []

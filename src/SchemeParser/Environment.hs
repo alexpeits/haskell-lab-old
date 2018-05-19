@@ -1,5 +1,6 @@
 module SchemeParser.Environment where
 
+import GHC.IO.Unsafe
 import Data.IORef
 import Data.Maybe (isJust)
 
@@ -53,8 +54,22 @@ defineVar var value = do
                      writeIORef envR (M.insert var valueRef env)
                      return value
 
--- bindVars :: Env -> [(String, LispVal)] -> IO Env
--- bindVars envR bindings = readIORef envR >>= extendEnv bindings >>= newIORef
---   where extendEnv bindings env = fmap (foldr (uncurry M.insert) env) (mapM addBinding bindings)
---         addBinding (var, value) = do ref <- newIORef value
---                                      return (var, ref)
+bindVars' :: Env -> [(String, LispVal)] -> IO Env
+bindVars' envR bindings = readIORef envR >>= extendEnv bindings >>= newIORef
+  where extendEnv bindings env = fmap (foldr (uncurry M.insert) env) (mapM addBinding bindings)
+        addBinding (var, value) = do ref <- newIORef value
+                                     return (var, ref)
+
+bindVars :: [(String, LispVal)] -> Scheme Env
+bindVars bindings = do
+  envR <- ask
+  env <- liftIO $ readIORef envR
+  b <- liftIO $ extendEnv bindings env
+  liftIO $ newIORef b
+  where extendEnv bindings env = fmap (foldr (uncurry M.insert) env) (mapM addBinding bindings)
+        addBinding (var, value) = do ref <- newIORef value
+                                     return (var, ref)
+
+-- degbugging
+instance (Show a) => Show (IORef a) where
+    show a = show (unsafePerformIO (readIORef a))

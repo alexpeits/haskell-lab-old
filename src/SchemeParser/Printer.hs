@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module SchemeParser.Printer where
 
 import Data.Complex (Complex(..))
@@ -15,6 +16,7 @@ showVal :: LispVal -> String
 showVal (LString s) = "\"" ++ s ++ "\""
 showVal (LChar c) = "#\\" ++ [c]
 showVal (LAtom a) = a
+showVal LNil = "nil"
 showVal (LNumber n) = show n
 showVal (LFloat f) = show f
 showVal (LRatio r) = show (numerator r) ++ "/" ++ show (denominator r)
@@ -24,6 +26,10 @@ showVal (LBool False) = "#false"
 showVal (LList xs) = "(" ++ unwordsList xs ++ ")"
 showVal (LDottedList hd tl) = "(" ++ unwordsList hd ++ " . " ++ showVal tl ++ ")"
 showVal (LVector xs) = "#(" ++ unwordsList xs ++ ")"
+showVal (LPrimFunc _) = "<primitive>"
+showVal LFunc{..} = "(lambda (" ++ unwords (map show params) ++ vargs ++ ") ...)"
+  where vargs = case vararg of Nothing -> ""
+                               Just args -> " . " ++ args
 
 instance Show LispVal where
   show = showVal

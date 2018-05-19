@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module SchemeParser.Types where
 
 import Data.IORef
@@ -13,9 +14,10 @@ import Text.Parsec
 
 -- parser
 
-type LispParser = Parsec String (M.Map String LispVal)
+type LispParser = Parsec String ()
 
 data LispVal = LAtom String
+             | LNil
              | LString String
              | LBool Bool
              | LChar Char
@@ -26,7 +28,14 @@ data LispVal = LAtom String
              | LList [LispVal]
              | LDottedList [LispVal] LispVal
              | LVector [LispVal]
+             | LPrimFunc ([LispVal] -> Scheme LispVal)
+             | LFunc { params :: [String], vararg :: Maybe String,
+                       body :: [LispVal]}
              deriving Eq
+
+
+instance Eq ([LispVal] -> Scheme LispVal) where
+  _ /= _ = False
 
 -- errors
 
@@ -61,3 +70,8 @@ type Scheme = ReaderT Env (ExceptT LispError IO)
 
 runScheme :: Scheme a -> Env -> IO (Either LispError a)
 runScheme sa env = runExceptT $ runReaderT sa env
+
+testScheme :: Scheme a -> IO (Either LispError a)
+testScheme sa = do
+  e <- testEnv
+  runScheme sa e
