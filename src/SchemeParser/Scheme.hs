@@ -22,16 +22,16 @@ readExpr input = case P.parse parseExpr "lisp" input of
   Left err  -> throwError $ Parser err
   Right val -> return val
 
-evalAndPrint :: Env -> String -> IO ()
+evalAndPrint :: SchemeEnv -> String -> IO ()
 evalAndPrint env s = evalExpr env s >>= putStrLn
 
-evalExpr :: Env -> String -> IO String
+evalExpr :: SchemeEnv -> String -> IO String
 evalExpr env expr = do
   res <- runExceptT $ runReaderT (readExpr expr >>= eval) env
   return $ extractValue $ trapError $ fmap show res
 
-envWithPrims :: IO Env
-envWithPrims = nullEnv >>= flip bindVars' (map makePrimFunc (M.toList primitives))
+envWithPrims :: IO SchemeEnv
+envWithPrims = nullEnv >>= (\x -> bindVars' GlobalEnv x (map makePrimFunc (M.toList primitives)))
   where makePrimFunc (var, func) = (var, LPrimFunc func)
 
 main :: IO ()

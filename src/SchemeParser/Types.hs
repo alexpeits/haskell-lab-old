@@ -30,7 +30,7 @@ data LispVal = LAtom String
              | LVector [LispVal]
              | LPrimFunc ([LispVal] -> Scheme LispVal)
              | LFunc { params :: [String], vararg :: Maybe String,
-                       body :: [LispVal]}
+                       closure :: M.Map String LispVal, body :: [LispVal]}
              deriving Eq
 
 
@@ -51,24 +51,48 @@ type ThrowsError = Either LispError
 
 -- environment
 
-type Env = IORef (M.Map String (IORef LispVal))
+type Env_ = IORef (M.Map String (IORef LispVal))
 
-nullEnv :: IO Env
-nullEnv = newIORef M.empty
+data Env a = Env
+  { globalEnv :: a
+  , localEnv  :: a
+  }
 
-testEnv :: IO Env
+data EnvType = GlobalEnv | LocalEnv
+
+type SchemeEnv = Env Env_
+
+getEnv :: EnvType -> SchemeEnv -> Env_
+getEnv GlobalEnv = globalEnv
+getEnv LocalEnv = localEnv
+
+setEnv :: EnvType -> SchemeEnv -> Env_ -> SchemeEnv
+setEnv GlobalEnv e e_ = e {globalEnv = e_}
+setEnv LocalEnv e e_ = e {localEnv = e_}
+
+pureEnv :: Env_ -> IO (M.Map String LispVal)
+pureEnv envR = do
+  env <- readIORef envR
+  let m = M.toList env
+  return $ M.empty
+
+nullEnv :: IO SchemeEnv
+nullEnv = Env <$> newIORef M.empty <*> newIORef M.empty
+
+testEnv :: IO SchemeEnv
 testEnv = do
   envR <- nullEnv
-  env <- readIORef envR
+  let e = globalEnv envR
+  env <- readIORef e
   valueRef <- newIORef (LNumber 1)
-  writeIORef envR (M.insert "foo" valueRef env)
+  writeIORef e (M.insert "foo" valueRef env)
   return envR
 
 -- global type
 
-type Scheme = ReaderT Env (ExceptT LispError IO)
+type Scheme = ReaderT SchemeEnv (ExceptT LispError IO)
 
-runScheme :: Scheme a -> Env -> IO (Either LispError a)
+runScheme :: Scheme a -> SchemeEnv -> IO (Either LispError a)
 runScheme sa env = runExceptT $ runReaderT sa env
 
 testScheme :: Scheme a -> IO (Either LispError a)

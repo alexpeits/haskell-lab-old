@@ -66,19 +66,20 @@ eval (LList (LAtom "case" : key : clause : clauses)) = eval key >>= (\res -> eva
         evalCase k (LList [LList caseChoices, caseRes]) [] =
           if k `elem` caseChoices then eval caseRes else throwError (Default "Exhausted clauses in `case`")
 
-eval (LList (LAtom "get" : [LString arg])) = getVar arg
-eval (LList (LAtom "set" : LString name : [val])) = setVar name val
-eval (LList (LAtom "define" : LAtom name : [val])) = eval val >>= defineVar name
-eval (LList (LAtom "define" : LList (LAtom name : paramList) : bdy)) = defineVar name (LFunc (map showVal paramList) Nothing bdy)
-eval (LList (LAtom "lambda" : LList paramList : bdy)) =  return $ LFunc (map showVal paramList) Nothing bdy
-eval (LList [LAtom "printenv"]) = do env <- ask; liftIO (print env); return (LBool True)
+eval (LList (LAtom "get" : [LString arg])) = getVar GlobalEnv arg
+eval (LList (LAtom "set" : LString name : [val])) = setVar GlobalEnv name val
+eval (LList (LAtom "define" : LAtom name : [val])) = eval val >>= defineVar GlobalEnv name
+eval (LList (LAtom "define" : LList (LAtom name : paramList) : bdy)) =
+  defineVar GlobalEnv name (LFunc (map showVal paramList) Nothing M.empty bdy)
+-- eval (LList (LAtom "lambda" : LList paramList : bdy)) =  return $ LFunc (map showVal paramList) Nothing bdy
+eval (LList [LAtom "printenv"]) = do env <- asks (getEnv GlobalEnv); liftIO (print env); return (LBool True)
 eval (LList [LAtom "load", LString filename]) = load filename >>= fmap last . mapM eval
 -- eval (LList (LAtom func : args)) = mapM eval args >>= applyPrim func
 eval (LList (LAtom fname : fargs)) = do
-  f <- getVar fname
+  f <- getVar GlobalEnv fname
   args <- mapM eval fargs
   applyF f args
-eval (LAtom var) = getVar var
+eval (LAtom var) = getVar GlobalEnv var
 -- eval (LList (func : args)) = do f <- eval func
                                 -- argVals <- mapM eval args
                                 -- applyF func argVals
@@ -101,7 +102,7 @@ applyF LFunc{..} args = do
   if num params /= num args && isNothing vararg
     then throwError $ NumArgs (num params) args
     else
-    do envR <- bindVars $ zip params args
+    do envR <- bindVars LocalEnv $ zip params args
        local (const envR) evalBody
 
 primitives :: M.Map String ([LispVal] -> Scheme LispVal)

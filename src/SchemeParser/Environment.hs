@@ -20,52 +20,53 @@ liftThrows (Right val) = return val
 -- runIOThrows :: Scheme String -> IO String
 -- runIOThrows action = extractValue <$> (trapError <$> runScheme action)
 
-isBound :: String -> Scheme Bool
-isBound var = do
-  envR <- ask
+isBound :: EnvType -> String -> Scheme Bool
+isBound et var = do
+  envR <- asks (getEnv et)
   liftIO $ isJust . M.lookup var <$> readIORef envR
 -- readIORef env >>= return . isJust . M.lookup var
 
-getVar :: String -> Scheme LispVal
-getVar var = do
-  env <- ask >>= liftIO . readIORef
+getVar :: EnvType -> String -> Scheme LispVal
+getVar et var = do
+  env <- asks (getEnv et) >>= liftIO . readIORef
   maybe
     (throwError $ UnboundVar "Unable to get unbound variable" var)
     (liftIO . readIORef)
     (M.lookup var env)
 
-setVar :: String -> LispVal -> Scheme LispVal
-setVar var value = do
-  env <- ask >>= liftIO . readIORef
+setVar :: EnvType -> String -> LispVal -> Scheme LispVal
+setVar et var value = do
+  env <- asks (getEnv et) >>= liftIO . readIORef
   maybe
     (throwError $ UnboundVar "Unable to set unbound variable" var)
     (liftIO . flip writeIORef value)
     (M.lookup var env)
   return value
 
-defineVar :: String -> LispVal -> Scheme LispVal
-defineVar var value = do
-  alreadyDefined <- isBound var
-  envR <- ask
+defineVar :: EnvType -> String -> LispVal -> Scheme LispVal
+defineVar et var value = do
+  alreadyDefined <- isBound et var
+  envR <- asks (getEnv et)
   if alreadyDefined
-    then setVar var value
+    then setVar et var value
     else liftIO $ do valueRef <- newIORef value
                      env <- readIORef envR
                      writeIORef envR (M.insert var valueRef env)
                      return value
 
-bindVars' :: Env -> [(String, LispVal)] -> IO Env
-bindVars' envR bindings = readIORef envR >>= extendEnv bindings >>= newIORef
-  where extendEnv bindings env = fmap (foldr (uncurry M.insert) env) (mapM addBinding bindings)
+bindVars' :: EnvType -> SchemeEnv -> [(String, LispVal)] -> IO SchemeEnv
+bindVars' et env bindings = setEnv et env <$> (readIORef (getEnv et env) >>= extendEnv bindings >>= newIORef)
+  where extendEnv bindings env' = fmap (foldr (uncurry M.insert) env') (mapM addBinding bindings)
         addBinding (var, value) = do ref <- newIORef value
                                      return (var, ref)
 
-bindVars :: [(String, LispVal)] -> Scheme Env
-bindVars bindings = do
-  envR <- ask
+bindVars :: EnvType -> [(String, LispVal)] -> Scheme SchemeEnv
+bindVars et bindings = do
+  e <- ask
+  envR <- asks (getEnv et)
   env <- liftIO $ readIORef envR
   b <- liftIO $ extendEnv bindings env
-  liftIO $ newIORef b
+  liftIO $ setEnv et e <$> newIORef b
   where extendEnv bindings env = fmap (foldr (uncurry M.insert) env) (mapM addBinding bindings)
         addBinding (var, value) = do ref <- newIORef value
                                      return (var, ref)

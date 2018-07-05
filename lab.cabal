@@ -34,6 +34,8 @@ library
     , SchemeParser.Printer
     , SchemeParser.Scheme
     , SchemeParser.Repl
+    , TemplateHask
+    , Lenses
   other-modules:
       Paths_lab
   hs-source-dirs:
@@ -56,6 +58,10 @@ library
     , process
     , attoparsec
     , mtl
+    , transformers
+    , logict
+    , template-haskell
+    , lens
   default-language: Haskell2010
 
 executable lab-exe
