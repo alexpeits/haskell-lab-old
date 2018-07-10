@@ -7,14 +7,19 @@
 {-# LANGUAGE FunctionalDependencies #-}
 module LensOverTea where
 
-
 import Control.Applicative
 import Control.Arrow ((&&&))
+
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Writer
 
 import Data.Functor.Identity
 import Data.Functor.Const
 
 import Data.Monoid (First(..), Any(..), Endo(..))
+
+import System.IO.Unsafe
 
 type Lens s t a b = forall f. Functor f => (a -> f b) -> s -> f t
 type Lens' s a = Lens s s a a
@@ -108,6 +113,24 @@ set l f = runIdentity . l (Identity . const f)
 view :: Getting a s a -> s -> a
 view l = getConst . l Const
 
+data Temp = Temp {_cel :: Int} deriving Show
+
+cel :: Lens' Temp Int
+cel f (Temp c) = fmap Temp (f c)
+
+fahr :: Lens' Temp Int
+fahr f (Temp c) = fmap (\fa -> Temp (logIt (-) (s1 fa c) fa 1)) (f (logIt (+) (s2 c) c 1))
+  where s1 a b = "{in " ++ show a ++ " " ++ show b ++ "}"
+        s2 a = "[out " ++ show a ++ "]"
+
+logIt :: (Int -> Int -> Int) -> String -> Int -> Int -> Int
+logIt f s a b = unsafePerformIO go
+  where go = do
+          putStr s
+          return $ f a b
+
+t = Temp 1
+
 -- toListOf :: ((a -> Const [a] a) -> s -> Const [a] s) -> s -> [a]
 -- toListOf :: Getting [a] s a -> s -> [a]
 -- toListOf :: Getting (AppendList a) s a -> s -> [a]
@@ -147,3 +170,17 @@ instance Traversable t => Each (t a) (t b) a b where
 
 -- instance (a ~ a', b ~ b') => Each (a, a') (b, b') a b where
 --   each f ~(a,b) = (,) <$> f a <*> f b
+
+view' :: MonadReader s m => Getting a s a -> m a
+view' l = asks (getConst . l Const)
+
+views :: MonadReader s m => Getting a s a -> (a -> r) -> m r
+views l f = f <$> view' l
+
+data Env = Env {_test :: (String, String)} deriving Show
+
+test :: Lens' Env (String, String)
+test = lens _test (\e v -> Env v)
+
+e :: Env
+e = Env ("test", "env")
