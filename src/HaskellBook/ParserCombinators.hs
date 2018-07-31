@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedStrings #-}
-module HaskellBook where
+module HaskellBook.ParserCombinators where
 
 import Data.List (inits)
 import Data.Char (isAlpha)

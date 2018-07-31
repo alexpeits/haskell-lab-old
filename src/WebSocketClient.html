@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Haskell WebSockets example</title>
+    <script type="text/JavaScript"
+      src="https://code.jquery.com/jquery-1.6.3.min.js"></script>
+    <style>
+      html {
+      font-family: sans-serif;
+      background-color: #335;
+      font-size: 16px;
+      }
+
+      body {
+      }
+
+      h1 {
+      text-align: center;
+      font-size: 20px;
+      color: #fff;
+      padding: 10px 10px 20px 10px;
+      }
+
+      h2 {
+      border-bottom: 1px solid black;
+      display: block;
+      font-size: 18px;
+      }
+
+      div#main {
+      width: 600px;
+      margin: 0px auto 0px auto;
+      padding: 0px;
+      background-color: #fff;
+      height: 460px;
+      }
+
+      div#warnings {
+      color: red;
+      font-weight: bold;
+      margin: 10px;
+      }
+
+      div#join-section {
+      float: left;
+      margin: 10px;
+      }
+
+      div#users-section {
+      width: 170px;
+      float: right;
+      padding: 0px;
+      margin: 10px;
+      }
+
+      ul#users {
+      list-style-type: none;
+      padding-left: 0px;
+      height: 300px;
+      overflow: auto;
+      }
+
+      div#chat-section {
+      width: 390px;
+      float: left;
+      margin: 10px;
+      }
+
+      div#messages {
+      margin: 0px;
+      height: 300px;
+      overflow: auto;
+      }
+
+      div#messages p {
+      margin: 0px;
+      padding: 0px;
+      }
+
+      div#footer {
+      text-align: center;
+      font-size: 12px;
+      color: #fff;
+      margin: 10px 0px 30px 0px;
+      }
+
+      div#footer a {
+      color: #fff;
+      }
+
+      div.clear {
+      clear: both;
+      }
+
+    </style>
+  </head>
+  <body>
+    <h1>Haskell WebSockets example</h1>
+    <div id="main">
+      <div id="warnings">
+      </div>
+      <div id="join-section">
+        <h2>Join</h2>
+        <form id="join-form" action="javascript: void(0)">
+          <label for="user">Username: </label>
+          <input id="user" type="text" size="12" />
+          <input id="welcome" type="submit" value="Join" />
+        </form>
+      </div>
+      <div id="users-section" style="display: none">
+        <h2>Users</h2>
+        <ul id="users">
+        </ul>
+      </div>
+      <div id="chat-section" style="display: none">
+        <h2>Chat</h2>
+        <div id="messages">
+        </div>
+        <br />
+        <form id="message-form" action="javascript: void(0)">
+          <input id="text" type="text" size="40" />
+          <input id="talk" type="submit" value="Send" />
+        </form>
+      </div>
+    </div>
+    <div id="footer">
+      Source code available <a href="http://github.com/jaspervdj/websockets/tree/master/example">here</a>
+    </div>
+  </body>
+  <script>
+   function createChatSocket() {
+     return new WebSocket('ws://localhost:25000/');
+   }
+
+   var users = [];
+
+   function refreshUsers() {
+     $('#users').html('');
+     for(i in users) {
+       $('#users').append($(document.createElement('li')).text(users[i]));
+     }
+   }
+
+   function onMessage(event) {
+     var p = $(document.createElement('p')).text(event.data);
+
+     $('#messages').append(p);
+     $('#messages').animate({scrollTop: $('#messages')[0].scrollHeight});
+
+     if(event.data.match(/^[^:]* joined/)) {
+       var user = event.data.replace(/ .*/, '');
+       users.push(user);
+       refreshUsers();
+     }
+
+     if(event.data.match(/^[^:]* disconnected/)) {
+       var user = event.data.replace(/ .*/, '');
+       var idx = users.indexOf(user);
+       users = users.slice(0, idx).concat(users.slice(idx + 1));
+       refreshUsers();
+     }
+   }
+
+   $(document).ready(function () {
+     $('#join-form').submit(function () {
+       $('#warnings').html('');
+       var user = $('#user').val();
+       var ws = createChatSocket();
+
+       ws.onopen = function() {
+         ws.send('Hi! I am ' + user);
+       };
+
+       ws.onmessage = function(event) {
+         if(event.data.match('^Welcome! Users: ')) {
+           /* Calculate the list of initial users */
+           var str = event.data.replace(/^Welcome! Users: /, '');
+           if(str != "") {
+             users = str.split(", ");
+             refreshUsers();
+           }
+
+           $('#join-section').hide();
+           $('#chat-section').show();
+           $('#users-section').show();
+
+           ws.onmessage = onMessage;
+
+           $('#message-form').submit(function () {
+             var text = $('#text').val();
+             ws.send(text);
+             $('#text').val('');
+             return false;
+           });
+         } else {
+           $('#warnings').append(event.data);
+           ws.close();
+         }
+       };
+
+       $('#join').append('Connecting...');
+
+       return false;
+     });
+   });
+
+  </script>
+</html>
