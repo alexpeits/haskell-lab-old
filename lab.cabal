@@ -48,6 +48,7 @@ library
     , directory
     , text
     , bytestring
+    , dlist
     , hspec
     , QuickCheck
     , checkers

@@ -4,7 +4,12 @@ module HaskellBook.Traversabl where
 
 import Data.Traversable
 
-newtype Identity a = Identity a deriving (Eq, Ord, Show, Functor, Foldable)
+import HaskellBook.Monads
+
+-- newtype Identity a = Identity a deriving (Eq, Ord, Show, Functor, Foldable)
+
+instance Foldable Identity where
+  foldMap f (Identity a) = f a
 
 instance Traversable Identity where
   traverse f (Identity a) = Identity <$> f a
@@ -31,3 +36,29 @@ instance Functor (Constant a) where
 instance Traversable (Constant a) where
   -- traverse :: (a -> f b) -> Constant x a -> f (Constant x b)
   traverse _ (Constant a) = pure $ Constant a
+
+--
+
+data Optional a = Nada | Yep a deriving (Eq, Show)
+
+instance Foldable Optional where
+  foldMap _ Nada    = mempty
+  foldMap f (Yep a) = f a
+
+instance Functor Optional where
+  fmap _ Nada    = Nada
+  fmap f (Yep a) = Yep (f a)
+
+instance Traversable Optional where
+  traverse _ Nada    = pure Nada
+  traverse f (Yep a) = Yep <$> f a
+
+--
+
+instance Foldable List where
+  foldMap _ Nil         = mempty
+  foldMap f (Cons a as) = mappend (f a) $ foldMap f as
+
+instance Traversable List where
+  traverse _ Nil         = pure Nil
+  traverse f (Cons a as) = Cons <$> f a <*> traverse f as
