@@ -34,6 +34,8 @@ library
     , SchemeParser.Printer
     , SchemeParser.Scheme
     , SchemeParser.Repl
+    , Dependently.Nat
+    , Dependently.Vec
     , TemplateHask
     , Lenses
   other-modules:
