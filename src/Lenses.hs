@@ -3,6 +3,8 @@ module Lenses where
 
 import Control.Lens hiding (element)
 
+import Data.Maybe (fromJust)
+
 import System.IO.Unsafe
 
 data Point = Point { _x :: Double, _y :: Double } deriving Show
@@ -31,6 +33,7 @@ m = Molecule [a, b]
 
 data Temp = Temp {_cel :: Int} deriving Show
 
+
 cel :: Lens' Temp Int
 cel f (Temp c) = fmap Temp (f c)
 
@@ -46,3 +49,37 @@ logIt f s a b = unsafePerformIO go
           return $ f a b
 
 t = Temp 1
+
+-- other stuff
+
+data User = User {_userName :: String, _userAge :: Int, _userPets :: [Pet], _userPartner :: Maybe User}
+data Pet  = Pet  {_petAnimal :: Animal, _petName :: String} deriving Show
+data Animal = Dog | Cat deriving Show
+
+instance Show User where
+  show (User n a ps p) =
+    "User {" ++
+    "_userName = " ++ n ++ ", " ++
+    "_userAge = " ++ show a ++ ", " ++
+    "_userPets = " ++ show ps ++ ", " ++
+    "_userPartner = " ++ showPartner p ++ "}"
+    where showPartner Nothing = "Nothing"
+          showPartner (Just u) = "Just " ++ _userName u
+
+makeLenses ''User
+makeLenses ''Pet
+
+u1 = User "Alex" 27 [p1, p2] (Just u2)
+u2 = User "Namir" 26 [] (Just u1)
+u3 = User "Doe" 30 [] Nothing
+
+p1 = Pet Dog "Azor"
+p2 = Pet Cat "Vagelis"
+
+e01 = u1 ^. userName  -- get name of user
+e02 = u1 & userPartner . _Just . userName .~ "foo"  -- set name of partner
+e03 = u1 ^. userPartner . _Just . userName  -- get name of partner
+e04 = u3 ^. userPartner . _Just . userName  -- monoid in action?
+e05 = u1 ^. userPets ^? ix 0  -- get first pet
+e06 = u1 & userPets . ix 0 . petAnimal .~ Cat  -- set animal of first pet
+e07 = u1 & userPets %~ (\xs -> xs ++ xs)  -- clone user's animals

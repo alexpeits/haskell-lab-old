@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -9,6 +10,7 @@
 module OverloadedLabels where
 
 import Data.Proxy
+import Data.String
 -- import Data.Typeable
 
 import qualified Data.Map as M
@@ -47,5 +49,23 @@ instance (KnownSymbol s) => IsLabel s (IntMap -> Int) where
   fromLabel m = m M.! symbolVal (Proxy @s)
 
 main :: IO ()
-main = -- print @Int $ #a b
+main = do
+  print @Int $ #a b
+  print @Int $ fromLabel @"a" b
   print $ fromLabel @"b" @(_ -> Int) b
+
+-- | Chris Done's example
+-- https://www.reddit.com/r/haskell/comments/4x8tk8/overloadedlabels_considered_awesome/
+
+data Html = Html String [String] [Html] | String String deriving (Show)
+
+instance IsString Html where fromString = String
+
+instance (KnownSymbol symbol, attr ~ String, inner ~ Html) => IsLabel symbol ([attr] -> [inner] -> Html) where
+  fromLabel = Html $ symbolVal (Proxy @symbol)
+
+instance (KnownSymbol symbol, attr ~ String, inner ~ Html) => IsLabel symbol ([inner] -> Html) where
+  fromLabel = Html (symbolVal (Proxy @symbol)) []
+
+document :: Html
+document = #html [#body [#p ["foo=bar", "baz=grok"] ["Hello!"]]]

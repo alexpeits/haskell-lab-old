@@ -47,3 +47,21 @@ class Odd n where
 -- class Mul a b c | a b -> c where mul :: a -> b -> c
 -- instance Mul Zero b Zero
 -- instance (Mul a b c, Add b c d) => Mul (Succ a) b d
+
+data Gender = Male | Female deriving (Eq, Show)
+data AMale
+data AFemale
+
+type family Dual g where
+  Dual Male = Female
+  Dual Female = Male
+
+type family S g where
+  S Male = AMale
+  S Female = AFemale
+
+data User :: Gender -> * where
+  AUser :: S g -> S (Dual g) -> User g
+
+x :: User Male
+x = AUser (undefined :: AMale) (undefined :: AFemale)
