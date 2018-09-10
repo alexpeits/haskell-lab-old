@@ -71,6 +71,7 @@ library
     , process
     , attoparsec
     , mtl
+    , postgresql-simple
     , transformers
     , logict
     , template-haskell
