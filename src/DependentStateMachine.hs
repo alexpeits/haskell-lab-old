@@ -1,13 +1,15 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 module DependentStateMachine where
 
 import Data.Kind
 
-data State = A | B | C | D
+data AState = A | B | C | D
 
 type family Transition s where
   Transition A = '[B, C]
@@ -24,19 +26,29 @@ type family Elem a as where
   Elem x (x ': xs) = True ~ True
   Elem x (y ': xs) = Elem x xs
 
-data AState s a = AState a deriving Show
+data State :: AState -> * -> * where
+  State :: s -> State t s
 
-check :: Elem b (Transition a) => AState a n -> AState b n
+check :: Elem m (Transition n) => State n a -> State m a
 check = undefined
 
-a :: AState A Int
-a = AState 1
+switch :: State A Int -> IO (State B Int)
+switch (State x) = putStrLn "yea" >> return (State (x + 1))
 
-b :: AState B Int
-b = AState 2
+switchIllegal :: State A Int -> IO (State D Int)
+switchIllegal (State x) = putStrLn "yea" >> return (State (x + 1))
 
-c :: AState C Int
-c = AState 3
+proceed :: Elem m (Transition n) => State n a -> (State n a -> IO (State m a)) -> IO (State m a)
+proceed s f = f s
 
-d :: AState D Int
-d = AState 4
+a :: State A Int
+a = State 1
+
+b :: State B Int
+b = State 2
+
+c :: State C Int
+c = State 3
+
+d :: State D Int
+d = State 4
