@@ -84,28 +84,28 @@ plusComm SZ     (SS SZ) = Refl
 plusComm (SS a) (SS SZ) = gcastWith (plusComm a (SS SZ)) Refl
 plusComm a      k@(SS b)  =
   let proof :: forall a b. SNat a -> SNat b -> (a + S b) :~: (S b + a)
-      proof x y = x1 ==> x2 ==> x3 ==> x4 ==> x5 ==> x6 ==> x7
+      proof x y = p1 ==> p2 ==> p3 ==> p4 ==> p5 ==> p6 ==> p7
         where
-          x1 :: (a + S b) :~: (a + (b + I))
-          x1 = gcastWith (given2 y (SS SZ)) Refl
+          p1 :: (a + S b) :~: (a + (b + I))
+          p1 = gcastWith (given2 y (SS SZ)) Refl
 
-          x2 :: (a + (b + I)) :~: ((a + b) + I)
-          x2 = gcastWith (plusAssoc x y (SS SZ)) Refl
+          p2 :: (a + (b + I)) :~: ((a + b) + I)
+          p2 = gcastWith (plusAssoc x y (SS SZ)) Refl
 
-          x3 :: ((a + b) + I) :~: ((b + a) + I)
-          x3 = gcastWith (plusComm x y) Refl
+          p3 :: ((a + b) + I) :~: ((b + a) + I)
+          p3 = gcastWith (plusComm x y) Refl
 
-          x4 :: ((b + a) + I) :~: (b + (a + I))
-          x4 = gcastWith (plusAssoc y x (SS SZ)) Refl
+          p4 :: ((b + a) + I) :~: (b + (a + I))
+          p4 = gcastWith (plusAssoc y x (SS SZ)) Refl
 
-          x5 :: (b + (a + I)) :~: (b + (I + a))
-          x5 = gcastWith (plusComm x (SS SZ)) Refl
+          p5 :: (b + (a + I)) :~: (b + (I + a))
+          p5 = gcastWith (plusComm x (SS SZ)) Refl
 
-          x6 :: (b + (I + a)) :~: ((b + I) + a)
-          x6 = gcastWith (plusAssoc y (SS SZ) x) Refl
+          p6 :: (b + (I + a)) :~: ((b + I) + a)
+          p6 = gcastWith (plusAssoc y (SS SZ) x) Refl
 
-          x7 :: ((b + I) + a) :~: (S b + a)
-          x7 = gcastWith (given2 y (SS SZ)) Refl
+          p7 :: ((b + I) + a) :~: (S b + a)
+          p7 = gcastWith (given2 y (SS SZ)) Refl
 
   in proof a b
 
@@ -152,39 +152,34 @@ mulPlusDist :: SNat a -> SNat b -> SNat c -> ((a + b) * c) :~: ((a * c) + (b * c
 mulPlusDist a b SZ       = Refl
 mulPlusDist a b k@(SS c) =
   let proof :: forall a b c. SNat a -> SNat b -> SNat c -> ((a + b) * S c) :~: ((a * S c) + (b * S c))
-      proof x y z = x1 ==> x2 ==> x3 ==> x4 ==> x5 ==> x6 ==> x7 ==> x8 ==> x9
+      proof x y z = p1 ==> p2 ==> p3 ==> p4 ==> p5 ==> p6 ==> p7 ==> p8 ==> p9
         where
-          x1 :: ((a + b) * S c) :~: (((a + b) * c) + (a + b))
-          x1 = Refl -- from (4)
+          p1 :: ((a + b) * S c) :~: (((a + b) * c) + (a + b))
+          p1 = Refl -- from (4)
 
-          x2 :: (((a + b) * c) + (a + b)) :~: (((a * c) + (b * c)) + (a + b))
-          x2 = gcastWith (mulPlusDist x y z) Refl
+          p2 :: (((a + b) * c) + (a + b)) :~: (((a * c) + (b * c)) + (a + b))
+          p2 = gcastWith (mulPlusDist x y z) Refl
 
-          x3 :: (((a * c) + (b * c)) + (a + b)) :~: ((a * c) + ((b * c) + (a + b)))
-          x3 = gcastWith (plusAssoc xmz ymz xpy) Refl
+          p3 :: (((a * c) + (b * c)) + (a + b)) :~: ((a * c) + ((b * c) + (a + b)))
+          p3 = gcastWith (plusAssoc (x !* z) (y !* z) (x !+ y)) Refl
 
-          x4 :: ((a * c) + ((b * c) + (a + b))) :~: ((a * c) + ((a + b) + (b * c)))
-          x4 = gcastWith (plusComm ymz xpy) Refl
+          p4 :: ((a * c) + ((b * c) + (a + b))) :~: ((a * c) + ((a + b) + (b * c)))
+          p4 = gcastWith (plusComm (y !* z) (x !+ y)) Refl
 
-          x5 :: ((a * c) + ((a + b) + (b * c))) :~: (((a * c) + (a + b)) + (b * c))
-          x5 = gcastWith (plusAssoc xmz xpy ymz) Refl
+          p5 :: ((a * c) + ((a + b) + (b * c))) :~: (((a * c) + (a + b)) + (b * c))
+          p5 = gcastWith (plusAssoc (x !* z) (x !+ y) (y !* z)) Refl
 
-          x6 :: (((a * c) + (a + b)) + (b * c)) :~: ((((a * c) + a) + b) + (b * c))
-          x6 = gcastWith (plusAssoc xmz x y) Refl
+          p6 :: (((a * c) + (a + b)) + (b * c)) :~: ((((a * c) + a) + b) + (b * c))
+          p6 = gcastWith (plusAssoc (x !* z) x y) Refl
 
-          x7 :: ((((a * c) + a) + b) + (b * c)) :~: (((a * c) + a) + (b + (b * c)))
-          x7 = gcastWith (plusAssoc xmzpx y ymz) Refl
+          p7 :: ((((a * c) + a) + b) + (b * c)) :~: (((a * c) + a) + (b + (b * c)))
+          p7 = gcastWith (plusAssoc ((x !* z) !+ x) y (y !* z)) Refl
 
-          x8 :: (((a * c) + a) + (b + (b * c))) :~: (((a * c) + a) + ((b * c) + b))
-          x8 = gcastWith (plusComm y ymz) Refl
+          p8 :: (((a * c) + a) + (b + (b * c))) :~: (((a * c) + a) + ((b * c) + b))
+          p8 = gcastWith (plusComm y (y !* z)) Refl
 
-          x9 :: (((a * c) + a) + ((b * c) + b)) :~: ((a * S c) + (b * S c))
-          x9 = Refl
-
-          xmz = x !* z
-          ymz = y !* z
-          xpy = x !+ y
-          xmzpx = xmz !+ x
+          p9 :: (((a * c) + a) + ((b * c) + b)) :~: ((a * S c) + (b * S c))
+          p9 = Refl
 
   in proof a b c
 
@@ -194,22 +189,22 @@ mulComm a SZ       = gcastWith (mulZeroPropL a) Refl
 mulComm a k@(SS b) =
   let
     proof :: forall a b c. SNat a -> SNat b -> (a * S b) :~: (S b * a)
-    proof x y = x1 ==> x2 ==> x3 ==> x4 ==> x5
+    proof x y = p1 ==> p2 ==> p3 ==> p4 ==> p5
       where
-        x1 :: (a * S b) :~: ((a * b) + a)
-        x1 = Refl
+        p1 :: (a * S b) :~: ((a * b) + a)
+        p1 = Refl
 
-        x2 :: ((a * b) + a) :~: ((b * a) + a)
-        x2 = gcastWith (mulComm x y) Refl
+        p2 :: ((a * b) + a) :~: ((b * a) + a)
+        p2 = gcastWith (mulComm x y) Refl
 
-        x3 :: ((b * a) + a) :~: ((b * a) + (I * a))
-        x3 = gcastWith (mulIdenL x) Refl
+        p3 :: ((b * a) + a) :~: ((b * a) + (I * a))
+        p3 = gcastWith (mulIdenL x) Refl
 
-        x4 :: ((b * a) + (I * a)) :~: ((b + I) * a)
-        x4 = gcastWith (mulPlusDist y (SS SZ) x) Refl
+        p4 :: ((b * a) + (I * a)) :~: ((b + I) * a)
+        p4 = gcastWith (mulPlusDist y (SS SZ) x) Refl
 
-        x5 :: ((b + I) * a) :~: (S b * a)
-        x5 = Refl
+        p5 :: ((b + I) * a) :~: (S b * a)
+        p5 = Refl
 
   in proof a b
 
@@ -218,39 +213,34 @@ mulAssoc :: SNat a -> SNat b -> SNat c -> ((a * b) * c) :~: (a * (b * c))
 mulAssoc a b SZ       = Refl
 mulAssoc a b k@(SS c) =
   let proof :: forall a b c. SNat a -> SNat b -> SNat c -> ((a * b) * S c) :~: (a * (b * S c))
-      proof x y z = x1 ==> x2 ==> x3 ==> x4 ==> x5 ==> x6 ==> x7 ==> x8 ==> x9
+      proof x y z = p1 ==> p2 ==> p3 ==> p4 ==> p5 ==> p6 ==> p7 ==> p8 ==> p9
         where
-          x1 :: ((a * b) * S c) :~: (((a * b) * c) + (a * b))
-          x1 = Refl -- from (4)
+          p1 :: ((a * b) * S c) :~: (((a * b) * c) + (a * b))
+          p1 = Refl -- from (4)
 
-          x2 :: (((a * b) * c) + (a * b)) :~: ((a * (b * c)) + (a * b))
-          x2 = gcastWith (mulAssoc x y z) Refl
+          p2 :: (((a * b) * c) + (a * b)) :~: ((a * (b * c)) + (a * b))
+          p2 = gcastWith (mulAssoc x y z) Refl
 
-          x3 :: ((a * (b * c)) + (a * b)) :~: ((a * b) + (a * (b * c)))
-          x3 = gcastWith (plusComm xmymz xmy) Refl
+          p3 :: ((a * (b * c)) + (a * b)) :~: ((a * b) + (a * (b * c)))
+          p3 = gcastWith (plusComm (x !* (y !* z)) (x !* y)) Refl
 
-          x4 :: ((a * b) + (a * (b * c))) :~: ((b * a) + (a * (b * c)))
-          x4 = gcastWith (mulComm x y) Refl
+          p4 :: ((a * b) + (a * (b * c))) :~: ((b * a) + (a * (b * c)))
+          p4 = gcastWith (mulComm x y) Refl
 
-          x5 :: ((b * a) + (a * (b * c))) :~: ((b * a) + ((b * c) * a))
-          x5 = gcastWith (mulComm x ymz) Refl
+          p5 :: ((b * a) + (a * (b * c))) :~: ((b * a) + ((b * c) * a))
+          p5 = gcastWith (mulComm x (y !* z)) Refl
 
-          x6 :: ((b * a) + ((b * c) * a)) :~: ((b + (b * c)) * a)
-          x6 = gcastWith (mulPlusDist y ymz x) Refl
+          p6 :: ((b * a) + ((b * c) * a)) :~: ((b + (b * c)) * a)
+          p6 = gcastWith (mulPlusDist y (y !* z) x) Refl
 
-          x7 :: ((b + (b * c)) * a) :~: (a * (b + (b * c)))
-          x7 = gcastWith (mulComm x ypymz) Refl
+          p7 :: ((b + (b * c)) * a) :~: (a * (b + (b * c)))
+          p7 = gcastWith (mulComm x (y !+ (y !* z))) Refl
 
-          x8 :: (a * (b + (b * c))) :~: (a * ((b * c) + b))
-          x8 = gcastWith (plusComm y ymz) Refl
+          p8 :: (a * (b + (b * c))) :~: (a * ((b * c) + b))
+          p8 = gcastWith (plusComm y (y !* z)) Refl
 
-          x9 :: (a * ((b * c) + b)) :~: (a * (b * S c))
-          x9 = Refl
-
-          xmymz = x !* (y !* z)
-          xmy = x !* y
-          ymz = y !* z
-          ypymz = y !+ ymz
+          p9 :: (a * ((b * c) + b)) :~: (a * (b * S c))
+          p9 = Refl
 
   in proof a b c
 
