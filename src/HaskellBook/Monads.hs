@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 module HaskellBook.Monads where
 
 import Test.QuickCheck
@@ -156,3 +157,33 @@ meh (a:as) f = (:) <$> f a <*> meh as f
 
 flipType :: Monad m => [m a] -> m [a]
 flipType mas = meh mas id
+
+newtype F r a = F {unR :: r -> a}
+
+instance Functor (F r) where
+  fmap :: (a -> b) -> F r a -> F r b
+  fmap f (F ra) = F $ \r -> f (ra r)
+
+instance Applicative (F r) where
+  pure :: a -> F r a
+  pure a = F $ \_ -> a
+
+  (<*>) :: F r (a -> b) -> F r a -> F r b
+  (F rab) <*> (F ra) = F $ \r -> (rab r) (ra r)
+
+instance Monad (F r) where
+  return :: a -> F r a
+  return = pure
+
+  (>>=) :: F r a -> (a -> F r b) -> F r b
+  (F ra) >>= f = F $ \r -> case f (ra r) of
+    F rb -> rb r
+
+foo :: String -> Int
+foo = read
+
+bar :: Int -> String -> Int
+bar i = (+ i) . (+ i) . read
+
+baz :: Int -> String -> Int
+baz i = (+ i) . (+ i) . (+ i) . read

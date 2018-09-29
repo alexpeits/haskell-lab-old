@@ -69,12 +69,12 @@ instance Show User where
 makeLenses ''User
 makeLenses ''Pet
 
-u1 = User "Alex" 27 [p1, p2] (Just u2)
-u2 = User "Namir" 26 [] (Just u1)
-u3 = User "Doe" 30 [] Nothing
+u1 = User "A" 27 [p1, p2] (Just u2)
+u2 = User "B" 26 [] (Just u1)
+u3 = User "C" 30 [] Nothing
 
-p1 = Pet Dog "Azor"
-p2 = Pet Cat "Vagelis"
+p1 = Pet Dog "A dog"
+p2 = Pet Cat "A cat"
 
 e01 = u1 ^. userName  -- get name of user
 e02 = u1 & userPartner . _Just . userName .~ "foo"  -- set name of partner

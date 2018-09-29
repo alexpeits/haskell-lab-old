@@ -1,14 +1,12 @@
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE PolyKinds            #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 module NatProofs where
 
 import Data.Type.Equality
@@ -71,12 +69,43 @@ plusIdenL :: SNat a -> (Z + a) :~: a
 plusIdenL SZ     = Refl
 plusIdenL (SS a) = gcastWith (plusIdenL a) Refl
 
--- PlusAssociativity
+-- Plus Associativity
 plusAssoc :: SNat a -> SNat b -> SNat c -> ((a + b) + c) :~: (a + (b + c))
 plusAssoc a b SZ     = Refl
 plusAssoc a b (SS c) = gcastWith (plusAssoc a b c) Refl
 
--- PlusCommutativity
+plusAssoc' :: SNat a -> SNat b -> SNat c -> ((a + b) + c) :~: (a + (b + c))
+plusAssoc' a b SZ =
+  let proof :: forall x y. SNat x -> SNat y -> ((x + y) + Z) :~: (x + (y + Z))
+      proof x y = step1 ==> step2
+        where
+          step1 :: ((x + y) + Z) :~: (x + y)
+          step1  = gcastWith (given1 (x !+ y)) Refl
+
+          step2 :: (x + y) :~: (x + (y + Z))
+          step2 = gcastWith (given1 y) Refl
+  in proof a b
+plusAssoc' a b (SS c) =
+  let proof ::
+        forall x y z.
+        SNat x -> SNat y -> SNat z ->
+        ((x + y) + S z) :~: (x + (y + S z))
+      proof x y z = step1 ==> step2 ==> step3 ==> step4
+        where
+          step1 :: ((x + y) + S z) :~: S ((x + y) + z)
+          step1 = gcastWith (given2 (x !+ y) (SS z)) Refl
+
+          step2 :: S ((x + y) + z) :~: S (x + (y + z))
+          step2 = gcastWith (plusAssoc' x y z) Refl
+
+          step3 :: S (x + (y + z)) :~: (x + S (y + z))
+          step3 = gcastWith (given2 x (y !+ z)) Refl
+
+          step4 :: (x + S (y + z)) :~: (x + (y + S z))
+          step4 = gcastWith (given2 y z) Refl
+  in proof a b c
+
+-- Plus Commutativity
 plusComm :: SNat a -> SNat b -> (a + b) :~: (b + a)
 plusComm SZ     SZ      = Refl
 plusComm a      SZ      = gcastWith (plusIdenL a) Refl
@@ -279,6 +308,22 @@ append n m (x:>xs) ys = gcastWith (proof n' m) $ x :> append n' m xs ys
 
         n' = spred n  -- we know that n !~ SZ from the (x:>xs) pattern match
 
+append' :: SNat n -> SNat m -> Vec n a -> Vec m a -> Vec (n + m) a
+append' SZ m V0 ys = gcastWith (plusIdenL m) ys
+append' n m (x:>xs) ys = gcastWith (proof pn m) $ x :> append' (spred n) m xs ys
+  where
+    pn = spred n
+    proof :: forall x y. SNat x -> SNat y -> (S x + y) :~: S (x + y)
+    proof x y = step1 ==> step2 ==> step3
+      where
+        step1 :: (S x + y) :~: (y + S x)
+        step1 = gcastWith (plusComm (SS x) y) Refl
+
+        step2 :: (y + S x) :~: S (y + x)
+        step2 = gcastWith (given2 y (SS x)) Refl
+
+        step3 :: S (y + x) :~: S (x + y)
+        step3 = gcastWith (plusComm y x) Refl
 
 -- Implicit version of `append`, thanks to typeclasses
 (+++) :: forall n m a. (IsNat n, IsNat m) => Vec n a -> Vec m a -> Vec (n + m) a
